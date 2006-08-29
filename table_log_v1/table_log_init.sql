@@ -19,10 +19,10 @@ BEGIN
 
     IF level <> 3 THEN
         level_create := level_create
-            ||'',trigger_id bigserial NOT NULL PRIMARY KEY'';
+            ||'', trigger_id BIGSERIAL NOT NULL PRIMARY KEY'';
         IF level <> 4 THEN
             level_create := level_create
-                ||'',trigger_user VARCHAR(32) NOT NULL'';
+                ||'', trigger_user VARCHAR(32) NOT NULL'';
             do_log_user := 1;
             IF level <> 5 THEN
                 RAISE EXCEPTION 
@@ -33,13 +33,13 @@ BEGIN
     
     EXECUTE ''CREATE TABLE ''||log_qq
           ||''(LIKE ''||orig_qq
-          ||'',trigger_mode VARCHAR(10) NOT NULL''
-          ||'',trigger_tuple VARCHAR(5) NOT NULL''
-          ||'',trigger_changed TIMESTAMPTZ NOT NULL''
+          ||'', trigger_mode VARCHAR(10) NOT NULL''
+          ||'', trigger_tuple VARCHAR(5) NOT NULL''
+          ||'', trigger_changed TIMESTAMPTZ NOT NULL''
           ||level_create
           ||'')'';
             
-    EXECUTE ''CREATE TRIGGER "table_log" AFTER UPDATE OR INSERT OR DELETE ON ''
+    EXECUTE ''CREATE TRIGGER "table_log_trigger" AFTER UPDATE OR INSERT OR DELETE ON ''
           ||orig_qq||'' FOR EACH ROW EXECUTE PROCEDURE table_log(''
           ||quote_literal(log_name)||'',''
           ||do_log_user||'',''
