@@ -23,6 +23,8 @@
 #include "utils/builtins.h"
 #include <utils/lsyscache.h>
 #include <funcapi.h>
+#include "utils/rel.h"
+#include "utils/timestamp.h"
 
 /* for PostgreSQL >= 8.2.x */
 #ifdef PG_MODULE_MAGIC
