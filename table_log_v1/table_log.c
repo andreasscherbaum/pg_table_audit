@@ -948,11 +948,12 @@ Datum table_log_restore_table(PG_FUNCTION_ARGS) {
   elog(NOTICE, "table_log_restore_table() done, results in: %s", table_restore);
 #endif /* TABLE_LOG_DEBUG */
 
+  /* close SPI connection */
+  SPI_finish();
+
   /* convert string to VarChar for result */
   return_name = DatumGetVarCharP(DirectFunctionCall2(varcharin, CStringGetDatum(table_restore), Int32GetDatum(strlen(table_restore) + VARHDRSZ)));
 
-  /* close SPI connection */
-  SPI_finish();
   /* and return the name of the restore table */
   PG_RETURN_VARCHAR_P(return_name);
 }
