@@ -42,8 +42,19 @@ PG_MODULE_MAGIC;
 
 extern Datum table_log(PG_FUNCTION_ARGS);
 Datum table_log_restore_table(PG_FUNCTION_ARGS);
+
+#if (PG_VERSION_NUM < 90100)
 static char *do_quote_ident(char *iptr);
 static char *do_quote_literal(char *iptr);
+#else
+/*
+ * Don't use outdated quoting functions when better versions in core
+ * for both as of 9.1.x
+ */
+# define do_quote_ident quote_identifier
+# define do_quote_literal quote_literal_cstr
+#endif
+
 static void __table_log (TriggerData *trigdata, char *changed_mode, char *changed_tuple, HeapTuple tuple, int number_columns, char *log_table, int use_session_user, char *log_schema);
 void __table_log_restore_table_insert(SPITupleTable *spi_tuptable, char *table_restore, char *table_orig_pkey, char *col_query_start, int col_pkey, int number_columns, int i);
 void __table_log_restore_table_update(SPITupleTable *spi_tuptable, char *table_restore, char *table_orig_pkey, char *col_query_start, int col_pkey, int number_columns, int i, char *old_key_string);
@@ -1099,7 +1110,11 @@ void __table_log_restore_table_delete(SPITupleTable *spi_tuptable, char *table_r
 
 
 
-
+/*
+ * Don't use outdated quoting functions when better versions in core
+ * for both as of 9.1.x
+ */
+#if (PG_VERSION_NUM < 90100)
 /*
  * MULTIBYTE dependant internal functions follow
  *
@@ -1250,6 +1265,8 @@ static char * do_quote_literal(char *lptr) {
 }
 
 #endif /* MULTIBYTE */
+
+#endif /* PG_VERSION_NUM */
 
 char * __table_log_varcharout(VarChar *s) {
   char	    *result;
