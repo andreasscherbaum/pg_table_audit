@@ -44,16 +44,16 @@ CREATE FUNCTION table_log ()
     AS 'MODULE_PATHNAME' LANGUAGE 'C';
 CREATE FUNCTION "table_log_restore_table" (VARCHAR, VARCHAR, CHAR, CHAR, CHAR, TIMESTAMPTZ, CHAR, INT, INT)
     RETURNS VARCHAR
-    AS 'MODULE_PATHNAME', 'table_log_restore_table' LANGUAGE 'C';
+    AS 'MODULE_PATHNAME', 'table_log_restore_table' LANGUAGE C;
 CREATE FUNCTION "table_log_restore_table" (VARCHAR, VARCHAR, CHAR, CHAR, CHAR, TIMESTAMPTZ, CHAR, INT)
     RETURNS VARCHAR
-    AS 'MODULE_PATHNAME', 'table_log_restore_table' LANGUAGE 'C';
+    AS 'MODULE_PATHNAME', 'table_log_restore_table' LANGUAGE C;
 CREATE FUNCTION "table_log_restore_table" (VARCHAR, VARCHAR, CHAR, CHAR, CHAR, TIMESTAMPTZ, CHAR)
     RETURNS VARCHAR
-    AS 'MODULE_PATHNAME', 'table_log_restore_table' LANGUAGE 'C';
+    AS 'MODULE_PATHNAME', 'table_log_restore_table' LANGUAGE C;
 CREATE FUNCTION "table_log_restore_table" (VARCHAR, VARCHAR, CHAR, CHAR, CHAR, TIMESTAMPTZ)
     RETURNS VARCHAR
-    AS 'MODULE_PATHNAME', 'table_log_restore_table' LANGUAGE 'C';
+    AS 'MODULE_PATHNAME', 'table_log_restore_table' LANGUAGE C;
 
 -- create trigger
 CREATE TRIGGER test_log_chg AFTER UPDATE OR INSERT OR DELETE ON test FOR EACH ROW
