@@ -418,9 +418,9 @@ The parameter list means:
   Thanks to Alexander Wirt <formorer@formorer.de> for Debian packaging
   Thanks to Devrim GÜNDÜZ <devrim@CommandPrompt.com> for RPM packaging
 
-- 2015-08-27
+- 2015-08-27: Glyn Astill (glyn@8kb.co.uk)
   - no release, changes as:
-  add headers to allow compilation against 9.4-9.5
+  add headers to allow compilation against 9.2-9.5
   use in-core quoting functions
   fix crash in table_log_restore_table
   add extension control file
