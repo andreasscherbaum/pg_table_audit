@@ -23,6 +23,8 @@
 #include "utils/builtins.h"
 #include <utils/lsyscache.h>
 #include <funcapi.h>
+#include "utils/rel.h"
+#include "utils/timestamp.h"
 
 /* for PostgreSQL >= 8.2.x */
 #ifdef PG_MODULE_MAGIC
@@ -40,8 +42,19 @@ PG_MODULE_MAGIC;
 
 extern Datum table_log(PG_FUNCTION_ARGS);
 Datum table_log_restore_table(PG_FUNCTION_ARGS);
+
+#if (PG_VERSION_NUM < 90100)
 static char *do_quote_ident(char *iptr);
 static char *do_quote_literal(char *iptr);
+#else
+/*
+ * Don't use outdated quoting functions when better versions in core
+ * for both as of 9.1.x
+ */
+# define do_quote_ident quote_identifier
+# define do_quote_literal quote_literal_cstr
+#endif
+
 static void __table_log (TriggerData *trigdata, char *changed_mode, char *changed_tuple, HeapTuple tuple, int number_columns, char *log_table, int use_session_user, char *log_schema);
 void __table_log_restore_table_insert(SPITupleTable *spi_tuptable, char *table_restore, char *table_orig_pkey, char *col_query_start, int col_pkey, int number_columns, int i);
 void __table_log_restore_table_update(SPITupleTable *spi_tuptable, char *table_restore, char *table_orig_pkey, char *col_query_start, int col_pkey, int number_columns, int i, char *old_key_string);
@@ -486,15 +499,17 @@ Datum table_log_restore_table(PG_FUNCTION_ARGS) {
   char  *table_orig;
   /* the primary key in the original table */
   char  *table_orig_pkey;
-  /* number columns in original table */
-  int  table_orig_columns;
   /* the log table name */
   char  *table_log;
   /* the primary key in the log table (usually trigger_id) */
   /* cannot be the same then then the pkey in the original table */
   char  *table_log_pkey;
+#ifdef TABLE_LOG_DEBUG
   /* number columns in log table */
   int  table_log_columns;
+  /* number columns in original table */
+  int  table_orig_columns;
+#endif /* TABLE_LOG_DEBUG */
   /* the restore table name */
   char  *table_restore;
   /* the timestamp in past */
@@ -516,7 +531,10 @@ Datum table_log_restore_table(PG_FUNCTION_ARGS) {
   char           query[250 + NAMEDATALEN];	/* for getting table infos (250 chars (+ one times the length of all names) should be enough) */
   int            need_search_pkey = 0;          /* does we have a single key to restore? */
   char           *tmp, *timestamp_string, *old_pkey_string = "";
-  char           *trigger_mode, *trigger_tuple, *trigger_changed;
+  char           *trigger_mode, *trigger_tuple;
+#ifdef TABLE_LOG_DEBUG
+  char           *trigger_changed;
+#endif /* TABLE_LOG_DEBUG */
   SPITupleTable  *spi_tuptable = NULL;          /* for saving query results */
   VarChar        *return_name;
 
@@ -636,9 +654,12 @@ Datum table_log_restore_table(PG_FUNCTION_ARGS) {
   if (ret != SPI_OK_SELECT) {
     elog(ERROR, "could not check relation: %s", table_orig);
   }
+#ifdef TABLE_LOG_DEBUG
   if (SPI_processed > 0) {
     table_orig_columns = SPI_processed;
-  } else {
+  }
+#endif /* TABLE_LOG_DEBUG */
+  if (SPI_processed <= 0) {
     elog(ERROR, "could not check relation: %s", table_orig);
   }
   /* check pkey in original table */
@@ -666,9 +687,12 @@ Datum table_log_restore_table(PG_FUNCTION_ARGS) {
   if (ret != SPI_OK_SELECT) {
     elog(ERROR, "could not check relation [1]: %s", table_log);
   }
+#ifdef TABLE_LOG_DEBUG
   if (SPI_processed > 0) {
     table_log_columns = SPI_processed;
-  } else {
+  }
+#endif /* TABLE_LOG_DEBUG */
+  if (SPI_processed <= 0) {
     elog(ERROR, "could not check relation [2]: %s", table_log);
   }
   /* check pkey in log table */
@@ -856,7 +880,9 @@ Datum table_log_restore_table(PG_FUNCTION_ARGS) {
     /* get tuple data */
     trigger_mode = SPI_getvalue(spi_tuptable->vals[i], spi_tuptable->tupdesc, number_columns + 1);
     trigger_tuple = SPI_getvalue(spi_tuptable->vals[i], spi_tuptable->tupdesc, number_columns + 2);
+#ifdef TABLE_LOG_DEBUG
     trigger_changed = SPI_getvalue(spi_tuptable->vals[i], spi_tuptable->tupdesc, number_columns + 3);
+#endif /* TABLE_LOG_DEBUG */
     /* check for update tuples we doesnt need */
     if (strcmp((const char *)trigger_mode, (const char *)"UPDATE") == 0) {
       if (method == 0 && strcmp((const char *)trigger_tuple, (const char *)"old") == 0) {
@@ -922,11 +948,12 @@ Datum table_log_restore_table(PG_FUNCTION_ARGS) {
   elog(NOTICE, "table_log_restore_table() done, results in: %s", table_restore);
 #endif /* TABLE_LOG_DEBUG */
 
+  /* close SPI connection */
+  SPI_finish();
+
   /* convert string to VarChar for result */
   return_name = DatumGetVarCharP(DirectFunctionCall2(varcharin, CStringGetDatum(table_restore), Int32GetDatum(strlen(table_restore) + VARHDRSZ)));
 
-  /* close SPI connection */
-  SPI_finish();
   /* and return the name of the restore table */
   PG_RETURN_VARCHAR_P(return_name);
 }
@@ -1084,7 +1111,11 @@ void __table_log_restore_table_delete(SPITupleTable *spi_tuptable, char *table_r
 
 
 
-
+/*
+ * Don't use outdated quoting functions when better versions in core
+ * for both as of 9.1.x
+ */
+#if (PG_VERSION_NUM < 90100)
 /*
  * MULTIBYTE dependant internal functions follow
  *
@@ -1097,16 +1128,16 @@ void __table_log_restore_table_delete(SPITupleTable *spi_tuptable, char *table_r
 static char * do_quote_ident(char *iptr) {
   char    *result;
   char    *result_return;
-  char    *cp1;
-  char    *cp2;
+//  char    *cp1;
+//  char    *cp2;
   int     len;
 
   len = strlen(iptr);
   result = (char *) palloc(len * 2 + 3);
   result_return = result;
 
-  cp1 = VARDATA(iptr);
-  cp2 = VARDATA(result);
+//  cp1 = VARDATA(iptr);
+//  cp2 = VARDATA(result);
 
   *result++ = '"';
   while (len-- > 0) {
@@ -1138,7 +1169,8 @@ static char * do_quote_literal(char *lptr) {
   *result++ = '\'';
   while (len-- > 0) {
     if (*lptr == '\'') {
-      *result++ = '\\';
+       /* escape single quotation mark SQL-standard preferred way */
+      *result++ = '\'';
     }
     if (*lptr == '\\') {
       /* just add a backslash, the ' will be follow */
@@ -1216,7 +1248,8 @@ static char * do_quote_literal(char *lptr) {
     }
 
     if (*lptr == '\'') {
-      *result++ = '\\';
+       /* escape single quotation mark SQL-standard preferred way */
+      *result++ = '\'';
     }
     if (*lptr == '\\') {
       /* just add a backslash, the ' will be follow */
@@ -1233,6 +1266,8 @@ static char * do_quote_literal(char *lptr) {
 }
 
 #endif /* MULTIBYTE */
+
+#endif /* PG_VERSION_NUM */
 
 char * __table_log_varcharout(VarChar *s) {
   char	    *result;

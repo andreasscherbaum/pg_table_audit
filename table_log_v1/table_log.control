@@ -1,0 +1,5 @@
+# table_log extension
+comment = 'table_log () -- log changes to another table'
+default_version = '0.4'
+module_pathname = '$libdir/table_log'
+relocatable = true
